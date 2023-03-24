@@ -1,262 +1,321 @@
-/*
-Patrick Broderick
-ID - 100689179
-Email: Patrick.Broderick@dcmail.ca
-2/12/2023
-Lab 2 WEB3201-CLIENT SIDE SCRIPTING
-*/
+"use strict";
+(function () {
+    function AuthGuard() {
+        // added task-list to protected routes
+        let protected_routes = [
+            "contact-list",
+            "task-list"
+        ];
+        if (protected_routes.indexOf(router.ActiveLink) > -1) {
+            if (!sessionStorage.getItem("user")) {
+                router.ActiveLink = "login";
+            }
+        }
+    }
+    function LoadLink(link, data = "") {
+        router.ActiveLink = link;
+        AuthGuard();
+        router.LinkData = data;
+        history.pushState({}, "", router.ActiveLink);
+        document.title = router.ActiveLink.substring(0, 1).toUpperCase() + router.ActiveLink.substring(1);
+        $("ul>li>a").each(function () {
+            $(this).removeClass("active");
+        });
+        $(`li>a:contains(${document.title})`).addClass("active");
+        CheckLogin();
+        LoadContent();
+    }
+    function AddNavigationEvents() {
+        let NavLinks = $("ul>li>a");
+        NavLinks.off("click");
+        NavLinks.off("mouseover");
+        NavLinks.on("click", function () {
+            LoadLink($(this).attr("data"));
+        });
+        NavLinks.on("mouseover", function () {
+            $(this).css("cursor", "pointer");
+        });
+    }
+    function AddLinkEvents(link) {
+        let linkQuery = $(`a.link[data=${link}]`);
+        linkQuery.off("click");
+        linkQuery.off("mouseover");
+        linkQuery.off("mouseout");
+        linkQuery.css("text-decoration", "underline");
+        linkQuery.css("color", "blue");
+        linkQuery.on("click", function () {
+            LoadLink(`${link}`);
+        });
+        linkQuery.on("mouseover", function () {
+            $(this).css('cursor', 'pointer');
+            $(this).css('font-weight', 'bold');
+        });
+        linkQuery.on("mouseout", function () {
+            $(this).css('font-weight', 'normal');
+        });
+    }
+    function LoadHeader() {
+        $.get("./Views/components/header.html", function (html_data) {
+            $("header").html(html_data);
+            AddNavigationEvents();
+            CheckLogin();
+        });
+    }
+    function LoadContent() {
+        let page_name = router.ActiveLink;
+        let callback = ActiveLinkCallBack();
+        $.get(`./Views/content/${page_name}.html`, function (html_date) {
+            $("main").html(html_date);
+            callback();
+        });
+    }
+    function LoadFooter() {
+        $.get(`./Views/components/footer.html`, function (html_date) {
+            $("footer").html(html_date);
+        });
+    }
+    function DisplayHomePage() {
+        console.log("Home Page");
+        $("#AboutUsButton").on("click", () => {
+            LoadLink("about");
+        });
+        $("main").append(`<p id="MainParagraph" class="mt-3">This is the Main Paragraph</p>`);
+        $("main").append(`<article>
+        <p id="ArticleParagraph" class ="mt-3">This is the Article Paragraph</p>
+        </article>`);
+    }
+    function DisplayProductsPage() {
+        console.log("Products Page");
+    }
+    function DisplayServicesPage() {
+        console.log("Services Page");
+    }
+    function DisplayAboutPage() {
+        console.log("About Page");
+    }
+    function AddContact(fullName, contactNumber, emailAddress) {
+        let contact = new core.Contact(fullName, contactNumber, emailAddress);
+        if (contact.serialize()) {
+            let key = contact.FullName.substring(0, 1) + Date.now();
+            localStorage.setItem(key, contact.serialize());
+        }
+    }
+    function ValidateField(fieldID, regular_expression, error_message) {
+        let messageArea = $("#messageArea").hide();
+        $("#" + fieldID).on("blur", function () {
+            let text_value = $(this).val();
+            if (!regular_expression.test(text_value)) {
+                $(this).trigger("focus").trigger("select");
+                messageArea.addClass("alert alert-danger").text(error_message).show();
+            }
+            else {
+                messageArea.removeAttr("class").hide();
+            }
+        });
+    }
+    function ContactFormValidation() {
+        ValidateField("fullName", /^([A-Z][a-z]{1,3}.?\s)?([A-Z][a-z]{1,})((\s|,|-)([A-Z][a-z]{1,}))*(\s|,|-)([A-Z][a-z]{1,})$/, "Please enter a valid Full Name. This must include at least a Capitalized First Name and a Capitalized Last Name.");
+        ValidateField("contactNumber", /^(\+\d{1,3}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$/, "Please enter a valid Contact Number. Example: (416) 555-5555");
+        ValidateField("emailAddress", /^[a-zA-Z0-9._-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,10}$/, "Please enter a valid Email Address.");
+    }
+    function DisplayContactPage() {
+        console.log("Contact Page");
+        $("a[data='contact-list']").off("click");
+        $("a[data='contact-list']").on("click", function () {
+            LoadLink("contact-list");
+        });
+        ContactFormValidation();
+        let sendButton = document.getElementById("sendButton");
+        let subscribeCheckbox = document.getElementById("subscribeCheckbox");
+        sendButton.addEventListener("click", function (event) {
+            if (subscribeCheckbox.checked) {
+                let fullName = document.forms[0].fullName.value;
+                let contactNumber = document.forms[0].contactNumber.value;
+                let emailAddress = document.forms[0].emailAddress.value;
+                let contact = new core.Contact(fullName, contactNumber, emailAddress);
+                if (contact.serialize()) {
+                    let key = contact.FullName.substring(0, 1) + Date.now();
+                    localStorage.setItem(key, contact.serialize());
+                }
+            }
+        });
+    }
+    // TODO ADD NEW TASK FUNCTION FOR DISPLAY TASK LIST
+    function AddNewTask(){
+        console.log("waddadawd");
+    }
+    
+    // TODO DISPLAY TASK LIST FUNCTION 
+    function DisplayTaskList(){}
+    
+    function DisplayContactListPage() {
+        if (localStorage.length > 0) {
+            let contactList = document.getElementById("contactList");
+            let data = "";
+            let keys = Object.keys(localStorage);
+            let index = 1;
+            for (const key of keys) {
+                let contactData = localStorage.getItem(key);
+                let contact = new core.Contact();
+                contact.deserialize(contactData);
+                data += `<tr>
+                <th scope="row" class="text-center">${index}</th>
+                <td>${contact.FullName}</td>
+                <td>${contact.ContactNumber}</td>
+                <td>${contact.EmailAddress}</td>
+                <td class="text-center"><button value="${key}" class="btn btn-primary btn-sm edit"><i class="fas fa-edit fa-sm"></i> Edit</button></td>
+                <td class="text-center"><button value="${key}" class="btn btn-danger btn-sm delete"><i class="fas fa-trash-alt fa-sm"></i> Delete</button></td>
+                </tr>`;
+                index++;
+            }
+            contactList.innerHTML = data;
+            $("button.delete").on("click", function () {
+                if (confirm("Are you sure?")) {
+                    localStorage.removeItem($(this).val());
+                }
+                LoadLink("contact-list");
+            });
+            $("button.edit").on("click", function () {
+                LoadLink("edit", $(this).val());
+            });
+        }
+        $("#addButton").on("click", () => {
+            LoadLink("edit", "add");
+        });
+    }
+    function DisplayEditPage() {
+        console.log("Edit Page");
+        ContactFormValidation();
+        let page = router.LinkData;
+        switch (page) {
+            case "add":
+                {
+                    $("main>h1").text("Add Contact");
+                    $("#editButton").html(`<i class="fas fa-plus-circle fa-lg"></i> Add`);
+                    $("#editButton").on("click", (event) => {
+                        event.preventDefault();
+                        let fullName = document.forms[0].fullName.value;
+                        let contactNumber = document.forms[0].contactNumber.value;
+                        let emailAddress = document.forms[0].emailAddress.value;
+                        AddContact(fullName, contactNumber, emailAddress);
+                        LoadLink("contact-list");
+                    });
+                    $("#cancelButton").on("click", () => {
+                        LoadLink("contact-list");
+                    });
+                }
+                break;
+            default:
+                {
+                    let contact = new core.Contact();
+                    contact.deserialize(localStorage.getItem(page));
+                    $("#fullName").val(contact.FullName);
+                    $("#contactNumber").val(contact.ContactNumber);
+                    $("#emailAddress").val(contact.EmailAddress);
+                    $("#editButton").on("click", (event) => {
+                        event.preventDefault();
+                        contact.FullName = $("#fullName").val();
+                        contact.ContactNumber = $("#contactNumber").val();
+                        contact.EmailAddress = $("#emailAddress").val();
+                        localStorage.setItem(page, contact.serialize());
+                        LoadLink("contact-list");
+                    });
+                    $("#cancelButton").on("click", () => {
+                        LoadLink("contact-list");
+                    });
+                }
+                break;
+        }
+    }
+    function CheckLogin() {
+        if (sessionStorage.getItem("user")) {
+            $("#login").html(`<a id="logout" class="nav-link" href="#"><i class="fas fa-sign-out-alt"></i> Logout</a>`);
+            $("#task-list").html(`<a id="task-list" data="task-list" class="nav-link" href="#"><i class="fas fa-sign-out-alt"></i> Task list </a>`);
+            $("#logout").on("click", function () {
+                sessionStorage.clear();
+                $("#login").html(`<a class="nav-link" data="login"><i class="fas fa-sign-in-alt"></i> Login</a>`);
+                AddNavigationEvents();
+                LoadLink("login");
+            });
+            // Added task-list navigation when logged in 
+            $("#task-list").on("click", function () {
+                AddNavigationEvents();
+                LoadLink("task-list");
+            });
+        }
+        // if user is not logged in then task list is removed
+        if (sessionStorage.getItem("user") == null ) {
+            
+            $("#task-list").html(``);
+            
+        }
 
-
- /*
-Setting content of my different pages using jquery
-This is used by class name and editng the text within it
-*/
-x = $('.indexContent');
-x.text("Welcome to my Lab 1 for my Web development class - WEBD6201 - Client Side Scripting. Please click any of the links above to explore the webpage");
-
-x = $('.projectsContent');
-x.text("This is a list of my favourite projects I have done within my years at Computer Programming.");
-
-x = $('.aboutContent');
-x.text("This is an about page, I was supposed to have a partner but unfortunatley couldn't find one. So instead Ill tell you about myself. I am a 22 year old that is very interested in programming and learning different aspects of how technology works." +
-" I try every day to learn something new in hopes that one day I can do this professionally and have a good living. Unfortunatley I'm really bad at css and formatting websites to look nice.");
-x = $('.contactContent');
-
-x = $('.aboutEmail');
-x.text("patrick.broderick@dcmail.ca \n Dont have a linkable resume at the moment");
-x = $('.productsContent');
-x.text("hello world");
-
-x = $('.servicesContent');
-x.text("I am most skillfull in backend languages like python, c++, C# etc \n this is mainly because I find the backend of things alot more interesting then formatting front end designs and other things of that nature. I really have no interest in doing that at all as you can probably see!");
-
-x = $('.about-title');
-x.text("My About Page:");
-
-x = $('.card-title');
-x.text("OOP3 Project");
-
-x = $(".services-title");
-x.text("Services and Skills Page");
-
-x = $(".servicesSkills");
-x.text(" My Skills include (Python , Lua Scripting, \n C# using the .NET framework and UNITY)");
-// Replacing products nav item with project title and href link
-//
-// Create Navbar Bottom
-
-// READ ME 
-/*
-Deleted a chunk of code for inserting human resources into top nav bar
-Also removed function for inserting into "projects" into products navbar element
-These were required for lab 1, but is messing with new code I am trying to implement 
-*/
-// READ ME ^
-
-navbarBottom = document.createElement("nav");
-// create anchor element 
-navbarBottomContent = document.createElement("a");
-
-// editing class of bottom navbar and anchor tag
-navbarBottom.className = "navbar fixed-bottom navbar-light bg-light";
-navbarBottomContent.className = "navbar-brand";
-navbarBottomContent.textContent = "© Copyright 2023 - Patrick Broderick";
-// append navbar to the body, 
-document.body.appendChild(navbarBottom);
-// append anchor tag to navbar
-navbarBottom.appendChild(navbarBottomContent);
-// create login.html and register.html dynamically
-registerNavItem = document.createElement("a");
-loginNavItem = document.createElement("a");
-
-
-
-
-// x = $('.card-text');
-// x.text("One practice tutorial we have done so far in our OOP 3 Class");
-// query selector getting class names of elements and setting the text content to a hardcoded string.
-var projectContent = document.querySelectorAll(".card-text");
-var projectHeader = document.querySelectorAll(".card-header");
-var projectTitle = document.querySelectorAll(".card-title");
-
-// ---- Variables being set to different strings ----
-///projectTitle[1].textContent = "WEBD";
-//projectTitle[2].textContent = "FiveM!";
-//projectContent[2].textContent = "I am currently practicing my coding abilities on a video game called FiveM, it uses lua programming  to run scripts within the game of GTA V!!!!!!";
-//projectContent[0].textContent = " This is my OOP practice code snippet! I very much enjoyed getting back into OOP this year as I had to take a lap year and didnt get to do much ";
-//projectContent[1].textContent = " This is a snippet of this current assignment I am working on, its been pretty fun to try different things out with JS, Jquery and using github! fun!!";
-
-// function from https://stackoverflow.com/questions/14226803/wait-5-seconds-before-executing-next-line
-// function lets you input how many miliseconds the program will wait for.
-function wait(ms){
-    var start = new Date().getTime();
-    var end = start;
-    while(end < start + ms) {
-      end = new Date().getTime();
-   }
- }
-// submit button is used when you put your information into the form, no validation is present because nothing said to!
-/*
-Gets grabs information from texts inputs
-Prints the information in the console 
-Timer for 3 seconds then redirects/changes href to index.html
-
-*/ 
-function submitButton()
-{
-   var email = $('#email').val();
-   var contactNumber = $('#contact-number').val();
-   var message = $('#message').val();
-   var name = $('#name').val();
-   
-   console.log(name + contactNumber + email + message );
-   wait(3000);
-   window.location.href = 'index.html';
-   
-   
-}
-/***
- *    $$\           $$\               $$\                    $$\               $$$$$$\   $$$$$$\           $\    
- *    $$ |          $$ |            $$$$ |                   $$ |             $$  __$$\ $$  __$$\         $$$\   
- *    $$ | $$$$$$\  $$$$$$$\        \_$$ |         $$$$$$$\$$$$$$\  $$\   $$\ $$ /  \__|$$ /  \__|       $$ $$\  
- *    $$ | \____$$\ $$  __$$\         $$ |        $$  _____\_$$  _| $$ |  $$ |$$$$\     $$$$\           $$  \$$\ 
- *    $$ | $$$$$$$ |$$ |  $$ |        $$ |        \$$$$$$\   $$ |   $$ |  $$ |$$  _|    $$  _|          \__/ \__|
- *    $$ |$$  __$$ |$$ |  $$ |        $$ |         \____$$\  $$ |$$\$$ |  $$ |$$ |      $$ |                     
- *    $$ |\$$$$$$$ |$$$$$$$  |      $$$$$$\       $$$$$$$  | \$$$$  \$$$$$$  |$$ |      $$ |                     
- *    \__| \_______|\_______/       \______|      \_______/   \____/ \______/ \__|      \__|                     
- *                                                                                                               
- *                                                                                                               
- *                                                                                                               
- */
-/***
- *     /$$           /$$              /$$$$$$                   /$$                /$$$$$$  /$$$$$$       
- *    | $$          | $$             /$$__  $$                 | $$               /$$__  $$/$$__  $$      
- *    | $$  /$$$$$$ | $$$$$$$       |__/  \ $$        /$$$$$$$/$$$$$$   /$$   /$$| $$  \__/ $$  \__/      
- *    | $$ |____  $$| $$__  $$        /$$$$$$/       /$$_____/_  $$_/  | $$  | $$| $$$$   | $$$$          
- *    | $$  /$$$$$$$| $$  \ $$       /$$____/       |  $$$$$$  | $$    | $$  | $$| $$_/   | $$_/          
- *    | $$ /$$__  $$| $$  | $$      | $$             \____  $$ | $$ /$$| $$  | $$| $$     | $$            
- *    | $$|  $$$$$$$| $$$$$$$/      | $$$$$$$$       /$$$$$$$/ |  $$$$/|  $$$$$$/| $$     | $$            
- *    |__/ \_______/|_______/       |________/      |_______/   \___/   \______/ |__/     |__/            
- *    ↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓                                                                                                    
- *                                                                                                        
- *                                                                                                        
- */
-
-/*
-Patrick Broderick
-ID - 100689179
-Email: Patrick.Broderick@dcmail.ca
-2/12/2023
-Lab 2 WEB3201-CLIENT SIDE SCRIPTING
-*/
-// Error DIV
-const elem = document.createElement('div');
-elem.style.cssText = 'position: absolute; width: 100ppx; border-style: solid; height: 50px; z-index:100; background: red; border-color: black; border-width: 1px;';
-elem.textContent = ""
-document.body.appendChild(elem);
-elem.id = "ErrorMessage";
-
-
-// registration function that gets called onclick
-function registerFunction()
-{
-   // User Class 
-   class user{
-      constructor(first,last,password,email)
-      {
-         this.first = first;
-         this.last = last;
-         this.email = email;
-         this.password = password;
-   
-      }
-      // method for returning a string of the user object information
-      stringUserInfo(){
-         var userInfoString; 
-         userInfoString = " First name:  " + this.first + " Last Name: " + this.last + " Email: " + this.email + " password: " + this.password;
-         console.log(userInfoString); 
-      }
-   };
-   // get variables 
-   var firstname          =   $('#registerFirst').val();
-   var lastname           =   $('#registerLast').val();
-   var email              =   $('#registerEmail').val();
-   var password           =   $('#password').val();
-   var confirmPassword    =   $('#confirmPass').val();
-   var textLength         =   firstname;
-   var textLength2        =   lastname;
-   var textLength3        =   email;
-   var textLength4        =   password;  
-   var textLength5        =   confirmPassword;
-   var isValid            =   false;
-   var registerForm       =   document.getElementById("registerForm");
-   var validationLabel    =   $(".validationLabel");
-   
-   // x = $(".services-title");
-   // x.text("Services and Skills Page");
-   // check if first name and password are longer than two characters.
-   // prevent default event 
-   
-   // Validation based upon lab 2 requirments
-   if(textLength.length < 2 || textLength2.length < 2)
-   {
-      elem.textContent = "Please Ensure Youre first name is greater than 1 character ";
-   }
-   else if(textLength3.length < 8 || textLength3.includes("@") == false) 
-   {
-      elem.textContent= "Please ensure your email is greater than 8 characters and that it is a properly formatted email";
-   }
-   else if(textLength4.length < 6 || textLength4 != textLength5 )
-   {
-      elem.textContent= "Please ensure that your passwords are matching and are greater than 5 characters";      
-   }
-   else{
-      isValid = true;
-      elem.textContent = "";
-      // reset hidden DIV
-   }
-   
-   
-   // ensure email has a @ symbol and minimum length is 8
-   
-   // ensure passwords are matching and greater than 6 characters
-   
-   // after validation create a user object with information
-   // create a new user
-   if(isValid == true)
-   {
-      const newUser = new user(firstname, lastname,password,email);
-      // call class method to log user information to console
-      newUser.stringUserInfo();
-   
-      
-      
-      registerForm.reset();
-   }
-   else{
-      // do nothing
-   }
-   
-};
-
-function loginFunction()
-{
-   // navbar-nav mr-auto is class name of ul
-   // Grab Username and Password Information 
-   var username = $('#userNameLogin').val();
-   var password = $('#passwordLogin').val();
-   //create a new element li with class name nav-item 
-   newList = document.createElement("li");
-   newList.className = "nav-item"; 
-   // create a new <a> element with class nav-link and text of password variable
-   newAElement = document.createElement('a');
-   newAElement.className = "nav-link";
-   newAElement.textContent = username;
-   // append both elements to element of clas name navbar-nav mr-auto
-   navbarlist = document.getElementsByClassName("navbar-nav mr-auto");
-   navbarlist[2].appendChild(newList);
-   newList.appendChild(newAElement);
-   
-
-
-};
+    }
+    function DisplayLoginPage() {
+        console.log("Login Page");
+        let messageArea = $("#messageArea");
+        messageArea.hide();
+        AddLinkEvents("register");
+        $("#loginButton").on("click", function () {
+            let success = false;
+            let newUser = new core.User();
+            $.get("./Data/users.json", function (data) {
+                for (const user of data.users) {
+                    let username = document.forms[0].username.value;
+                    let password = document.forms[0].password.value;
+                    if (username == user.Username && password == user.Password) {
+                        newUser.fromJSON(user);
+                        success = true;
+                        break;
+                    }
+                }
+                if (success) {
+                    sessionStorage.setItem("user", newUser.serialize());
+                    messageArea.removeAttr("class").hide();
+                    LoadLink("contact-list");
+                }
+                else {
+                    $("#username").trigger("focus").trigger("select");
+                    messageArea.addClass("alert alert-danger").text("Error: Invalid Login Information").show();
+                }
+            });
+        });
+        $("#cancelButton").on("click", function () {
+            document.forms[0].reset();
+            LoadLink("home");
+        });
+    }
+    function DisplayRegisterPage() {
+        console.log("Register Page");
+        AddLinkEvents("login");
+    }
+    function Display404Page() {
+    }
+    function ActiveLinkCallBack() {
+        // added task-list and its corresponding callback page 
+        switch (router.ActiveLink) {
+            case "home": return DisplayHomePage;
+            case "about": return DisplayAboutPage;
+            case "products": return DisplayProductsPage;
+            case "services": return DisplayServicesPage;
+            case "contact": return DisplayContactPage;
+            case "contact-list": return DisplayContactListPage;
+            case "task-list": return DisplayTaskList;
+            case "edit": return DisplayEditPage;
+            case "login": return DisplayLoginPage;
+            case "register": return DisplayRegisterPage;
+            case "404": return Display404Page;
+            default:
+                console.error("ERROR: callback does not exist: " + router.ActiveLink);
+                return new Function();
+        }
+    }
+    function Start() {
+        console.log("App Started!");
+        LoadHeader();
+        LoadLink("home");
+        LoadFooter();
+    }
+    window.addEventListener("load", Start);
+})();
+//# sourceMappingURL=app.js.map
